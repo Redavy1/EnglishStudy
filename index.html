@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>영어 원서 분석 및 어휘 학습 도우미</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f4;
+            color: #333;
+        }
+        .container {
+            max-width: 800px;
+            margin: auto;
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        h1, h2 {
+            color: #333;
+            text-align: center;
+        }
+        textarea {
+            width: 98%;
+            height: 150px;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 1em;
+        }
+        button {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            background-color: #5cb85c;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1.1em;
+            margin-bottom: 20px;
+        }
+        button:hover {
+            background-color: #4cae4c;
+        }
+        .output-section {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #e9e9e9;
+            border-radius: 4px;
+        }
+        .output-section h3 {
+            margin-top: 0;
+            color: #555;
+        }
+        #koreanTranslationOutput {
+            white-space: pre-wrap; /* 줄바꿈 유지 */
+            font-style: italic;
+            color: #666;
+        }
+        #vocabularyList ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        #vocabularyList li {
+            background: #fff;
+            margin-bottom: 8px;
+            padding: 10px;
+            border-radius: 4px;
+            border-left: 5px solid #5cb85c;
+        }
+        #vocabularyList li strong {
+            color: #337ab7;
+        }
+        .instructions {
+            font-size: 0.9em;
+            color: #777;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>영어 원서 분석 및 어휘 학습 도우미</h1>
+        <p class="instructions">
+            아래 텍스트 영역에 영어 원서 내용을 입력하고 "분석하기" 버튼을 누르세요.<br>
+            (참고: 실제 번역 기능은 제공되지 않으며, 단어/숙어는 미리 정의된 목록에서 추출됩니다.)
+        </p>
+
+        <textarea id="englishInput" placeholder="여기에 영어 원서 내용을 입력하세요..."></textarea>
+        <button onclick="analyzeText()">분석하기</button>
+
+        <div class="output-section" id="translationSection" style="display:none;">
+            <h3>한국어 번역 (예시)</h3>
+            <div id="koreanTranslationOutput"></div>
+        </div>
+
+        <div class="output-section" id="vocabularySection" style="display:none;">
+            <h3>주요 단어 및 숙어</h3>
+            <div id="vocabularyList"><ul></ul></div>
+        </div>
+    </div>
+
+    <script>
+        // 미국 중학생 이상이 알면 좋을 단어/숙어 예시 목록
+        // 실제 사용 시 이 목록을 확장하거나 외부 파일/DB에서 불러와야 합니다.
+        const vocabularyData = [
+            { en: "ubiquitous", ko: "어디에나 있는, 아주 흔한" },
+            { en: "eloquent", ko: "설득력 있는, 유창한" },
+            { en: "ephemeral", ko: "수명이 짧은, 덧없는" },
+            { en: "meticulous", ko: "꼼꼼한, 세심한" },
+            { en: "cognizant", ko: "인식하고 있는, 알고 있는 (of)" },
+            { en: "inference", ko: "추론, 추리" },
+            { en: "hypothesis", ko: "가설" },
+            { en: "perspective", ko: "관점, 시각" },
+            { en: "break a leg", ko: "행운을 빌어! (주로 공연 전에 사용)" },
+            { en: "piece of cake", ko: "식은 죽 먹기, 매우 쉬운 일" },
+            { en: "hit the books", ko: "공부하다, 책을 보다" },
+            { en: "once in a blue moon", ko: "극히 드물게, 가뭄에 콩 나듯" },
+            { en: "let the cat out of the bag", ko: "비밀을 누설하다" },
+            { en: "spill the beans", ko: "비밀을 털어놓다" },
+            { en: "get the hang of", ko: "~의 요령을 터득하다, ~에 익숙해지다" },
+            { en: "on the ball", ko: "사정을 잘 알고 있는, 빈틈없는" },
+            { en: "under the weather", ko: "몸이 좀 안 좋은, 찌뿌둥한" },
+            { en: "the best of both worlds", ko: "양쪽 세상의 좋은 점만 누리는 것, 금상첨화" },
+            { en: "cutting corners", ko: "지름길로 가다, (일을 쉽게 하려고) 절차를 무시하다" },
+            { en: "add insult to injury", ko: "엎친 데 덮친 격, 설상가상" },
+            { en: "it's not rocket science", ko: "그렇게 어려운 일이 아니야" },
+            { en: "make ends meet", ko: "수입과 지출의 균형을 맞추다, 겨우 살아가다" }
+        ];
+
+        function analyzeText() {
+            const englishText = document.getElementById('englishInput').value;
+            if (!englishText.trim()) {
+                alert("분석할 영어 내용을 입력해주세요.");
+                return;
+            }
+
+            // --- 1. 한국어 번역 (여기서는 입력 텍스트를 그대로 보여주는 것으로 대체) ---
+            // 실제 번역 API를 사용하려면 여기에 해당 로직을 추가해야 합니다.
+            const translatedText = `(실제 번역 기능은 구현되지 않았습니다. 원문은 다음과 같습니다:)\n\n${englishText}`;
+            document.getElementById('koreanTranslationOutput').textContent = translatedText;
+            document.getElementById('translationSection').style.display = 'block';
+
+            // --- 2. 주요 단어 및 숙어 추출 ---
+            const vocabListElement = document.getElementById('vocabularyList').querySelector('ul');
+            vocabListElement.innerHTML = ''; // 이전 목록 초기화
+
+            const foundVocab = new Set(); // 중복 방지를 위해 Set 사용
+            const lowerCaseText = englishText.toLowerCase(); // 대소문자 구분 없이 검색
+
+            vocabularyData.forEach(item => {
+                // 정규표현식을 사용하여 단어 경계를 확인 (예: 'cat'이 'caterpillar'의 일부로 매칭되지 않도록)
+                // 숙어의 경우, 단순 포함으로도 충분할 수 있으나, 좀 더 정교하게 하려면 구문 분석이 필요.
+                // 여기서는 단순 `includes`와 단어 경계 `RegExp`를 혼용합니다.
+                const regex = new RegExp(`\\b${item.en.toLowerCase().replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}\\b`, 'gi');
+                
+                if (item.en.includes(" ")) { // 숙어 (공백 포함)
+                    if (lowerCaseText.includes(item.en.toLowerCase())) {
+                        foundVocab.add(item);
+                    }
+                } else { // 단일 단어
+                    if (regex.test(lowerCaseText)) {
+                         foundVocab.add(item);
+                    }
+                }
+            });
+
+            if (foundVocab.size > 0) {
+                foundVocab.forEach(item => {
+                    const listItem = document.createElement('li');
+                    listItem.innerHTML = `<strong>${item.en}:</strong> ${item.ko}`;
+                    vocabListElement.appendChild(listItem);
+                });
+            } else {
+                const listItem = document.createElement('li');
+                listItem.textContent = "추출된 주요 단어나 숙어가 없습니다. (미리 정의된 목록에 없거나, 입력 텍스트에 해당 표현이 없을 수 있습니다.)";
+                vocabListElement.appendChild(listItem);
+            }
+            document.getElementById('vocabularySection').style.display = 'block';
+        }
+    </script>
+</body>
+</html>
